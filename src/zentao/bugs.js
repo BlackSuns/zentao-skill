@@ -7,17 +7,27 @@ import {
   matchesAccount,
 } from "./normalize.js";
 
-export async function listBugs(client, { product, page, limit }) {
+export async function listBugs(client, { product, page, limit, status }) {
   if (!product) throw new Error("product is required");
+
+  const query = {
+    product,
+    page: toInt(page, 1),
+    limit: toInt(limit, 20),
+  };
+  if (status) {
+    const s = String(status).trim().toLowerCase();
+    if (s === "active" || s === "unresolved" || s === "open") query.status = "unresolved";
+    else if (s === "resolved" || s === "toclosed") query.status = "toclosed";
+    else if (s === "all") query.status = "all";
+    else if (s === "unclosed") query.status = "unclosed";
+    else query.status = s;
+  }
 
   const payload = await client.request({
     method: "GET",
     path: "/api.php/v1/bugs",
-    query: {
-      product,
-      page: toInt(page, 1),
-      limit: toInt(limit, 20),
-    },
+    query,
   });
 
   if (payload.error) return normalizeError(payload.error, payload);

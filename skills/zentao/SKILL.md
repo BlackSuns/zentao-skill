@@ -122,7 +122,7 @@ zentao risks list|get ...
 ## Bug commands
 
 ```bash
-zentao bugs list --product 6
+zentao bugs list --product 6 [--status active|resolved|unclosed|all] [--assigned-to account] [--opened-by account] [--keyword text] [--page N] [--limit N] [--json]
 zentao bugs mine --scope assigned --status active --include-details
 zentao bug get --id 1329 [--download-images]
 zentao bug images --id 1329 [--output-dir <path>]

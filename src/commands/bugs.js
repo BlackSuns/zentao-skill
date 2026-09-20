@@ -21,7 +21,9 @@ function parseCsvIntegers(value) {
 function printHelp() {
   process.stdout.write(`zentao bugs <subcommand>\n\n`);
   process.stdout.write(`Usage:\n`);
-  process.stdout.write(`  zentao bugs list --product <id> [--page N] [--limit N] [--json]\n`);
+  process.stdout.write(
+    `  zentao bugs list --product <id> [--status active|resolved|unclosed|all] [--assigned-to account] [--opened-by account] [--keyword text] [--page N] [--limit N] [--json]\n`
+  );
   process.stdout.write(
     `  zentao bugs mine [--scope assigned|opened|resolved|all] [--status active|resolved|closed|all] [--account <account>] [--product-ids 1,2] [--include-zero] [--per-page N] [--max-items N] [--limit N] [--include-details] [--json]\n`
   );
@@ -150,14 +152,60 @@ export async function runBugs({ argv = [], env = process.env } = {}) {
       product,
       page: cliArgs.page,
       limit: cliArgs.limit,
+      status: cliArgs.status,
     });
 
+    let bugs = result?.result?.bugs;
+    if (Array.isArray(bugs)) {
+      if (cliArgs["assigned-to"]) {
+        const target = String(cliArgs["assigned-to"]).trim().toLowerCase();
+        bugs = bugs.filter((b) => formatAccount(b.assignedTo).toLowerCase().includes(target));
+      }
+      if (cliArgs["opened-by"]) {
+        const target = String(cliArgs["opened-by"]).trim().toLowerCase();
+        bugs = bugs.filter((b) => formatAccount(b.openedBy).toLowerCase().includes(target));
+      }
+      if (cliArgs.keyword) {
+        const kw = String(cliArgs.keyword).trim().toLowerCase();
+        bugs = bugs.filter((b) => String(b.title || "").toLowerCase().includes(kw));
+      }
+    }
+
     if (cliArgs.json) {
+      if (!cliArgs.full && !cliArgs.raw && Array.isArray(bugs)) {
+        // Strip bulky HTML steps and internal database fields to keep JSON compact and within LLM tool limits (<50KB)
+        const cleanedBugs = bugs.map((b) => ({
+          id: b.id,
+          title: b.title,
+          status: b.status,
+          pri: b.pri,
+          severity: b.severity,
+          assignedTo: formatAccount(b.assignedTo),
+          openedBy: formatAccount(b.openedBy),
+          resolvedBy: formatAccount(b.resolvedBy),
+          resolution: b.resolution || "",
+          openedDate: b.openedDate || "",
+          resolvedDate: b.resolvedDate || "",
+        }));
+        const compactResult = {
+          ...result,
+          result: {
+            ...result.result,
+            bugs: cleanedBugs,
+          },
+        };
+        const pretty = JSON.stringify(compactResult, null, 2);
+        if (pretty.length > 20000) {
+          process.stdout.write(`${JSON.stringify(compactResult)}\n`);
+        } else {
+          process.stdout.write(`${pretty}\n`);
+        }
+        return;
+      }
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       return;
     }
 
-    const bugs = result?.result?.bugs;
     if (!Array.isArray(bugs)) {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       return;

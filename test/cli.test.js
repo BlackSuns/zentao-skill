@@ -9,7 +9,7 @@ import { listProducts } from "../src/zentao/products.js";
 import { getConfigPath, loadConfig, saveConfig } from "../src/config/store.js";
 import { formatProductsSimple } from "../src/commands/products.js";
 import { formatBugsMineSimple, formatBugsSimple, formatStatsSimple } from "../src/commands/bugs.js";
-import { bugsStats, resolveBug } from "../src/zentao/bugs.js";
+import { bugsStats, resolveBug, listBugs } from "../src/zentao/bugs.js";
 import { formatBugSimple } from "../src/commands/bug.js";
 import { readFileSync } from "node:fs";
 
@@ -115,6 +115,38 @@ test("ZentaoClient listProducts uses token then GET products", async () => {
     assert.ok(calls[0].url.endsWith("/api.php/v1/tokens"));
     assert.ok(calls[1].url.includes("/api.php/v1/products"));
     assert.equal(calls[1].options?.headers?.Token, "t_abc");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("ZentaoClient listBugs maps status active to unresolved", async () => {
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).endsWith("/api.php/v1/tokens")) {
+      return { text: async () => JSON.stringify({ token: "t_abc" }) };
+    }
+    return {
+      text: async () =>
+        JSON.stringify({
+          bugs: [{ id: 101, title: "Active bug", status: "active" }],
+          total: 1,
+          limit: 20,
+        }),
+    };
+  };
+
+  try {
+    const client = new ZentaoClient({
+      baseUrl: "https://example.com/zentao",
+      account: "leo",
+      password: "pw",
+    });
+    const res = await listBugs(client, { product: 142, status: "active" });
+    assert.equal(res.status, 1);
+    assert.ok(calls[1].includes("status=unresolved"));
   } finally {
     globalThis.fetch = originalFetch;
   }
