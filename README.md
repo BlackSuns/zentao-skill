@@ -209,12 +209,13 @@ zentao risks get --id 1
 
 ## 让 AI 帮你查禅道
 
-只需对你的 AI 助手（Cursor / Claude Code / Windsurf 等）说：
+只需对你的 AI 助手（Cursor / Claude Code / Windsurf / Pi 等）说：
 
-> 帮我执行 `npx skills add leeguooooo/zentao-mcp -y -g`，然后帮我登录禅道
+> 帮我执行 `npx skills add BlackSuns/zentao-skill -y -g`，然后帮我登录禅道
 
 安装后你就可以直接说：
 
+- "看下 Bug #40175 的截图并排查样式问题"
 - "帮我看下产品 6 有哪些未解决的 Bug"
 - "查一下 Bug #1329 的详情"
 - "我名下还有多少活跃 Bug？"
@@ -236,13 +237,13 @@ zentao risks get --id 1
 **1. 安装 Skill**
 
 ```bash
-npx skills add leeguooooo/zentao-mcp -y -g
+npx skills add BlackSuns/zentao-skill -y -g
 ```
 
 **2. 安装 CLI**
 
 ```bash
-pnpm i -g @leeguoo/zentao-mcp || npm i -g @leeguoo/zentao-mcp
+npm i -g @leeguoo/zentao-mcp
 ```
 
 **3. 验证安装**
@@ -259,7 +260,7 @@ zentao --help
 zentao login --zentao-url="<用户的禅道URL>" --zentao-account="<账号>" --zentao-password="<密码>"
 ```
 
-> 注意：URL 通常需要包含 `/zentao`，如 `https://zentao.example.com/zentao`
+> 注意：URL 通常需要包含 `/zentao`，如 `http://172.31.80.150:81/zentao`
 
 **5. 验证**
 
@@ -278,13 +279,12 @@ zentao self-test
 A: URL 需要包含 `/zentao`，比如 `https://zentao.example.com/zentao`，而不是 `https://zentao.example.com/`。
 
 **Q: 支持哪些禅道版本？**
-A: 支持禅道开源版和企业版的 REST API（v1）。
+A: 针对企业私有化部署经典 API 和开源版 REST API（v1）进行了深度兼容，并打通了 Token 鉴权图片直下功能。
 
 **Q: 凭据安全吗？**
 A: 凭据以明文 TOML 存储在 `~/.config/zentao/config.toml`，请确保文件权限安全。不要把配置文件提交到 Git。
 
 ## 链接
 
-- [npm](https://www.npmjs.com/package/@leeguoo/zentao-mcp)
-- [GitHub](https://github.com/leeguooooo/zentao-mcp)
-- [问题反馈](https://github.com/leeguooooo/zentao-mcp/issues)
+- [GitHub 仓库](https://github.com/BlackSuns/zentao-skill)
+- [问题反馈](https://github.com/BlackSuns/zentao-skill/issues)
