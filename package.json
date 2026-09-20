@@ -29,12 +29,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/leeguooooo/zentao-mcp"
+    "url": "https://github.com/BlackSuns/zentao-skill"
   },
   "bugs": {
-    "url": "https://github.com/leeguooooo/zentao-mcp/issues"
+    "url": "https://github.com/BlackSuns/zentao-skill/issues"
   },
-  "homepage": "https://github.com/leeguooooo/zentao-mcp#readme",
+  "homepage": "https://github.com/BlackSuns/zentao-skill#readme",
   "scripts": {
     "start": "node src/index.js",
     "self-test": "node src/index.js self-test",

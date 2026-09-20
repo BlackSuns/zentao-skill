@@ -2,13 +2,13 @@ export function printRootHelp() {
   // Keep this plain text: many users run via npx and paste output.
   process.stdout.write(`zentao - ZenTao CLI\n\n`);
   process.stdout.write(`Install skill:\n`);
-  process.stdout.write(`  npx skills add leeguooooo/zentao-mcp -y -g\n\n`);
+  process.stdout.write(`  npx skills add BlackSuns/zentao-skill -y -g\n\n`);
   process.stdout.write(`Usage:\n`);
   process.stdout.write(`  zentao login [--zentao-url ... --zentao-account ... --zentao-password ...] [--yes]\n`);
   process.stdout.write(`  zentao whoami\n`);
   process.stdout.write(`  zentao products list [--page N] [--limit N] [--json]\n`);
   process.stdout.write(`  zentao bugs list --product <id> [--page N] [--limit N] [--json]\n`);
-  process.stdout.write(`  zentao bug get|resolve|assign|comment|create|close|activate ...\n`);
+  process.stdout.write(`  zentao bug get|images|resolve|assign|comment|create|close|activate ...\n`);
   process.stdout.write(
     `  zentao bugs mine [--scope ...] [--status ...] [--include-details] [--json]\n`
   );
@@ -45,7 +45,7 @@ export function printRootHelp() {
   process.stdout.write(`  whoami              show current account\n`);
   process.stdout.write(`  products            ZenTao products\n`);
   process.stdout.write(`  bugs                ZenTao bugs\n`);
-  process.stdout.write(`  bug                 ZenTao bug (get/resolve/assign/comment/create/close/activate)\n`);
+  process.stdout.write(`  bug                 ZenTao bug (get/images/resolve/assign/comment/create/close/activate)\n`);
   process.stdout.write(`  task                ZenTao task (get/create/start/finish/close)\n`);
   process.stdout.write(`  tasks               ZenTao tasks (list)\n`);
   process.stdout.write(`  story               ZenTao story (get/create)\n`);

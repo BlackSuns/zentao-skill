@@ -2,11 +2,13 @@ import process from "node:process";
 import { decodeEscapedNewlines, extractCommand, hasHelpFlag, parseCliArgs } from "../cli/args.js";
 import { createClientFromCli } from "../zentao/client.js";
 import { getBug, resolveBug, assignBug, commentBug, closeBug, activateBug, createBug } from "../zentao/bugs.js";
+import { extractBugImages, downloadBugImages } from "../zentao/images.js";
 
 function printHelp() {
   process.stdout.write(`zentao bug - view and manage bugs\n\n`);
   process.stdout.write(`Usage:\n`);
-  process.stdout.write(`  zentao bug get --id <bugId> [--json]\n`);
+  process.stdout.write(`  zentao bug get --id <bugId> [--download-images] [--output-dir <path>] [--json]\n`);
+  process.stdout.write(`  zentao bug images --id <bugId> [--output-dir <path>] [--json]\n`);
   process.stdout.write(`  zentao bug resolve --id <bugId> --resolution <fixed|bydesign|duplicate|postponed|notrepro|willnotfix|tostory|external> [--resolved-build trunk] [--assigned-to <account>] [--comment "..."] [--json]\n`);
   process.stdout.write(`  zentao bug assign --id <bugId> --assigned-to <account> [--comment "..."] [--json]\n`);
   process.stdout.write(`  zentao bug comment --id <bugId> --comment "..." [--json]\n`);
@@ -20,6 +22,22 @@ function formatAccount(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (typeof value === "object") return String(value.account || value.name || value.realname || "");
   return "";
+}
+
+function formatStepsText(html) {
+  if (!html || typeof html !== "string") return "";
+  let text = html;
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p>/gi, "\n");
+  text = text.replace(/<p[^>]*>/gi, "");
+  text = text.replace(/<img[^>]+(?:alt=["']([^"']*)["'])?[^>]*>/gi, (m, alt) => `[Image${alt ? ": " + alt : ""}]`);
+  text = text.replace(/<[^>]+>/g, "");
+  text = text.replace(/&nbsp;/g, " ")
+             .replace(/&lt;/g, "<")
+             .replace(/&gt;/g, ">")
+             .replace(/&amp;/g, "&")
+             .replace(/&quot;/g, '"');
+  return text.trim();
 }
 
 export function formatBugSimple(bug) {
@@ -58,6 +76,9 @@ export async function runBug({ argv = [], env = process.env } = {}) {
   if (sub === "get") {
     return runBugGet(cliArgs, argvWithoutSub, env);
   }
+  if (sub === "images") {
+    return runBugImages(cliArgs, argvWithoutSub, env);
+  }
   if (sub === "resolve") {
     return runBugResolve(cliArgs, argvWithoutSub, env);
   }
@@ -80,9 +101,6 @@ export async function runBug({ argv = [], env = process.env } = {}) {
   throw new Error(`Unknown bug subcommand: ${sub || "(missing)"}`);
 }
 
-// 改状态的命令失败时必须让脚本知道：之前失败也只是往 stdout 打一段 JSON 然后
-// 正常返回，退出码是 0，批量调用照样当成功——#3 里一次空关 10 个单就是这么过去的。
-// 失败一律走 stderr + 非零退出码。
 function failMutation(result) {
   process.stderr.write(`${JSON.stringify(result, null, 2)}\n`);
   const err = new Error(result?.msg || "operation failed");
@@ -96,18 +114,94 @@ async function runBugGet(cliArgs, argv, env) {
 
   const api = createClientFromCli({ argv, env });
   const result = await getBug(api, { id });
-  if (cliArgs.json) {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    return;
-  }
-
   const bug = result?.result?.bug ?? result?.result;
+
   if (!bug || typeof bug !== "object") {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return;
   }
 
+  const downloadRequested = Boolean(cliArgs["download-images"] || cliArgs.images);
+  let downloadedImages = null;
+
+  if (downloadRequested) {
+    downloadedImages = await downloadBugImages(api, bug, {
+      outputDir: cliArgs["output-dir"],
+    });
+  }
+
+  if (cliArgs.json) {
+    if (downloadedImages) {
+      result.images = downloadedImages;
+    }
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    return;
+  }
+
+  // Terminal output
   process.stdout.write(formatBugSimple(bug));
+
+  const stepsText = formatStepsText(bug.steps);
+  if (stepsText) {
+    process.stdout.write(`\nSteps:\n${stepsText}\n`);
+  }
+
+  const existingImages = extractBugImages(bug, api.baseUrl);
+  if (downloadedImages) {
+    if (downloadedImages.count === 0) {
+      process.stdout.write(`\n[Images] No images found for this bug.\n`);
+    } else {
+      process.stdout.write(`\n[Images] Downloaded ${downloadedImages.count} image(s) to: ${downloadedImages.outputDir}\n`);
+      for (const img of downloadedImages.images) {
+        if (img.success) {
+          process.stdout.write(`  [${img.index}] ${img.localPath} (${img.sizeKb} KB) [${img.source}]\n`);
+        } else {
+          process.stdout.write(`  [${img.index}] Failed: ${img.url} (${img.error})\n`);
+        }
+      }
+      process.stdout.write(`Tip: Use read tool to view these images directly.\n`);
+    }
+  } else if (existingImages.length > 0) {
+    process.stdout.write(`\n[Images] ${existingImages.length} image(s) available. Run 'zentao bug images --id ${id}' or pass '--download-images' to download.\n`);
+  }
+}
+
+async function runBugImages(cliArgs, argv, env) {
+  const id = cliArgs.id;
+  if (!id) throw new Error("Missing --id");
+
+  const api = createClientFromCli({ argv, env });
+  const result = await getBug(api, { id });
+  const bug = result?.result?.bug ?? result?.result;
+
+  if (!bug || typeof bug !== "object") {
+    throw new Error(`Failed to load bug #${id}: ${JSON.stringify(result)}`);
+  }
+
+  const downloadResult = await downloadBugImages(api, bug, {
+    outputDir: cliArgs["output-dir"],
+  });
+
+  if (cliArgs.json) {
+    process.stdout.write(`${JSON.stringify({ status: 1, msg: "success", result: downloadResult }, null, 2)}\n`);
+    return;
+  }
+
+  if (downloadResult.count === 0) {
+    process.stdout.write(`No images found for Bug #${id} (${bug.title || ""}).\n`);
+    return;
+  }
+
+  process.stdout.write(`Bug #${id} (${bug.title || ""})\n`);
+  process.stdout.write(`Downloaded ${downloadResult.count} image(s) to: ${downloadResult.outputDir}\n\n`);
+  for (const img of downloadResult.images) {
+    if (img.success) {
+      process.stdout.write(`  [${img.index}] ${img.localPath} (${img.sizeKb} KB) [source: ${img.source}]\n`);
+    } else {
+      process.stdout.write(`  [${img.index}] Failed: ${img.url} (${img.error})\n`);
+    }
+  }
+  process.stdout.write(`\nTip: You can view these images directly with your multi-modal read tool.\n`);
 }
 
 async function runBugResolve(cliArgs, argv, env) {

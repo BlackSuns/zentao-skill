@@ -1,43 +1,39 @@
-# zentao-mcp
+# zentao-skill
 
-> ⚠️ **本项目不再维护。** 推荐改用禅道官方维护的 [`zentao-cli`](https://github.com/easysoft/zentao-cli) 和配套 Skills [`easysoft/zentao-skills`](https://github.com/easysoft/zentao-skills)：基于 RESTful API v2、内置 MCP server、模块覆盖更全，且持续更新。
->
-> 已经在用本包的用户不受影响，可以继续装；新项目请优先选择上游：
->
-> ```bash
-> npm i -g zentao-cli
-> npx skills add easysoft/zentao-skills
-> ```
+专为 AI 编码助手（Pi / Codex / Claude Code 等）及工程师打造的禅道 (ZenTao) CLI 命令行工具与 Agent Skill。
 
-在命令行里查 Bug、任务、需求、待办、产品、项目、测试和文档，让你的 AI 助手也能直接操作禅道。
+深度适配企业私有化部署版本及经典 REST API，内置 Bug 截图自动鉴权下载与多模态读图分析能力。
 
-零依赖、单文件，装完即用。
+零依赖、纯原生 Node.js，装完即用。
 
-## 快速开始
+## 快速安装
+
+通过 Agent Skills 安装技能：
 
 ```bash
-npx skills add leeguooooo/zentao-mcp -y -g
+npx skills add BlackSuns/zentao-skill -y -g
 ```
 
-安装 CLI：
-
-```bash
-pnpm i -g @leeguoo/zentao-mcp
-```
-
-没有 pnpm？也可以用 npm：
+本地全局安装 CLI 命令：
 
 ```bash
 npm i -g @leeguoo/zentao-mcp
 ```
 
-不想装？直接跑：
+或使用当前仓库源码链接：
 
 ```bash
-npx -y @leeguoo/zentao-mcp --help
+cd D:\Projects\zentao-skill
+npm link
 ```
 
-`skills add` 只负责安装 skill 文件；CLI 仍然建议全局安装后直接用 `zentao` 命令。
+不想全局安装？可直接执行：
+
+```bash
+node src/index.js --help
+```
+
+`skills add` 负责安装 AI Skill 定义；CLI 建议全局安装或 link 后直接在终端使用 `zentao` 命令。
 
 ## 登录
 
@@ -45,7 +41,7 @@ npx -y @leeguoo/zentao-mcp --help
 
 ```bash
 zentao login \
-  --zentao-url=https://zentao.example.com/zentao \
+  --zentao-url=http://172.31.80.150:81/zentao \
   --zentao-account=你的账号 \
   --zentao-password=你的密码
 ```
@@ -60,12 +56,31 @@ zentao whoami
 
 配置文件位置：`~/.config/zentao/config.toml`
 
+## 🌟 核心特色：Bug 截图自动鉴权下载与多模态分析
+
+许多前端/UI 界面缺陷 Bug 在重现步骤中往往只有截图，而禅道系统对附件图片加了权限校验，外部工具无法直接读取。
+
+本工具提供原生截图解析与免密下载能力：
+
+```bash
+# 自动提取并下载 Bug 关联的所有截图与附件（默认保存在 .zentao-images/<bugId>/）
+zentao bug images --id 40175
+
+# 指定本地存放目录
+zentao bug images --id 40175 --output-dir ./my-bug-images
+
+# 查询 Bug 详情并一键拉取截图
+zentao bug get --id 40175 --download-images
+```
+
+结合 AI Agent 的多模态视觉能力（如 `read` 工具），AI 可以直接查看截图中的红线标注与界面错位，告别“盲猜代码”！
+
 ## 支持的能力
 
 当前 CLI 已支持这些对象和动作：
 
 - 认证与连通性：`login`、`whoami`、`self-test`
-- Bug：列表、查询、创建、指派、评论、解决、关闭、激活、查我的 Bug
+- Bug：列表、查询、**截图下载 (images)**、创建、指派、评论、解决、关闭、激活、查我的 Bug、解决率统计
 - 任务：列表、查询、创建、开始、完成、暂停、关闭
 - 需求：列表、查询、创建
 - 待办：列表、查询、创建、完成、关闭

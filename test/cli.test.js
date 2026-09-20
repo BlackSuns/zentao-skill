@@ -67,7 +67,8 @@ test("config store save/load roundtrip", () => {
   saveConfig({ zentaoUrl: "u", zentaoAccount: "a", zentaoPassword: "p" }, { env });
   const loaded = loadConfig({ env });
   assert.equal(loaded.zentaoUrl, "u");
-  assert.equal(filePath.includes("zentao/config.toml"), true);
+  const normalized = filePath.replace(/\\/g, "/");
+  assert.equal(normalized.includes("zentao/config.toml"), true);
 });
 
 test("ZentaoClient listProducts uses token then GET products", async () => {
@@ -483,9 +484,10 @@ test("bugsStats excludes duplicate but keeps other resolutions", async () => {
 });
 
 test("repository exports a zentao skill for skills add", () => {
-  const skill = readFileSync(new URL("../skills/zentao/SKILL.md", import.meta.url), "utf8");
+  const raw = readFileSync(new URL("../skills/zentao/SKILL.md", import.meta.url), "utf8");
+  const skill = raw.replace(/\r\n/g, "\n");
   assert.match(skill, /^---\nname: zentao\n/m);
-  assert.match(skill, /npx skills add leeguooooo\/zentao-mcp -y -g/);
+  assert.match(skill, /npx skills add BlackSuns\/zentao-skill -y -g/);
 });
 
 test("root help mentions skills add install path", () => {
@@ -501,7 +503,7 @@ test("root help mentions skills add install path", () => {
   } finally {
     process.stdout.write = originalWrite;
   }
-  assert.match(output, /npx skills add leeguooooo\/zentao-mcp -y -g/);
+  assert.match(output, /npx skills add BlackSuns\/zentao-skill -y -g/);
 });
 
 // #3: 禅道在表单校验失败时仍返回 {"status":1,"msg":"success"} 加上原封不动的 bug，

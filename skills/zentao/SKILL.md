@@ -1,19 +1,27 @@
 ---
 name: zentao
-description: DEPRECATED — prefer the official zentao-cli (https://github.com/easysoft/zentao-cli) and its skills (https://github.com/easysoft/zentao-skills) for new setups. This skill still works for existing @leeguoo/zentao-mcp users and remains useful for its bug resolution stats command. Use the zentao CLI to query and operate ZenTao bugs, tasks, stories, todos, products, programs, projects, executions, plans, releases, test cases, test tasks, test suites, docs, users, departments, issues, and risks. Use when the user mentions 禅道 or ZenTao, wants bug/task/story/todo/project/test/doc lookups or updates, wants bug resolution rate stats or reports (bug 解决率统计/解决数量统计/bug statistics/bug report) by product or person, or needs login / whoami / self-test for a 禅道 instance. ZENTAO_URL usually includes /zentao.
-homepage: https://www.npmjs.com/package/@leeguoo/zentao-mcp
+description: ZenTao (禅道) 企业私有化部署专属 CLI 与多模态自动化工具。用于查询和操作禅道 Bug、下载并视觉分析 Bug 截图/附件、任务(Task)、需求(Story)、待办(Todo)、产品(Product)、项目(Project)、执行(Execution)、构建(Build)、测试用例(Test Case)、文档库等所有资源，支持 Bug 解决率与解决数量统计。本地已配置好内网免密鉴权与经典 API 兼容层。当用户提及任何禅道操作时，必须强制且唯一使用此 skill 的 zentao 命令行工具，严禁编写临时 Python/curl 脚本或爬虫绕过。
+homepage: https://github.com/BlackSuns/zentao-skill
 metadata: {"openclaw":{"emoji":"🐞","install":[{"id":"node","kind":"node","package":"@leeguoo/zentao-mcp","bins":["zentao"],"label":"Install zentao CLI (node)"}]}}
 ---
 
-# zentao (ZenTao CLI)
+# zentao (ZenTao CLI - 企业私有化适配与多模态增强版)
 
-> ⚠️ **Deprecated.** Prefer the officially maintained [`zentao-cli`](https://github.com/easysoft/zentao-cli) and its skills [`easysoft/zentao-skills`](https://github.com/easysoft/zentao-skills) (REST v2, built-in MCP server, fuller module coverage). Migrate with: `npx skills add easysoft/zentao-skills`. This skill still works for existing users.
+用于操作企业私有化部署的禅道管理系统，底层已打通内网鉴权、经典 API 兼容层与 Bug 截图多模态直读能力。
+
+## 核心执行原则（AI 必读）
+
+- **唯一标准途径**：凡是查询、更新、统计禅道数据，**必须**直接使用本 skill 提供的 `zentao` CLI 命令。
+- **严禁自行造轮子**：严禁尝试编写 Python 爬虫、curl 脚本或自建 HTTP 请求去直连禅道，本地 CLI 已处理好复杂的会话保持、Token 与企业老版本接口兼容。
+- **优先结构化输出**：当需要提取数据、进行分析或后续多步自动化时，优先在命令后追加 `--json` 参数。
+- **遇到样式/UI Bug 必须读图**：前端样式或界面缺陷 Bug 通常只包含截图，**排查前必须运行 `zentao bug images --id <id>` 或 `zentao bug get --id <id> --download-images` 下载截图，再使用多模态 `read` 工具查看本地图片**，切勿盲猜代码。
 
 ## When to use this skill
 
 Use this skill when the user asks anything about 禅道 / ZenTao, including:
 
-- bugs: list, mine, stats, get, create, resolve, assign, comment, close, activate
+- bugs: list, mine, stats, get, images, create, resolve, assign, comment, close, activate
+- bug images: download and inspect screenshots/attachments for UI bugs
 - tasks: list, get, create, start, finish, pause, close
 - stories: list, get, create
 - todos: list, get, create, finish, close
@@ -28,6 +36,7 @@ Use this skill when the user asks anything about 禅道 / ZenTao, including:
 Typical user asks include:
 
 - “帮我查禅道 bug / task / story / todo”
+- “看下这个 bug 的截图 / 下载 bug 图片”
 - “统计一下 bug 解决率” / “看看各产品的 bug 解决情况”
 - “看一下产品、项目、执行、版本、计划、构建”
 - “查测试单、测试用例、测试套件”
@@ -38,14 +47,14 @@ Typical user asks include:
 ## Installation
 
 ```bash
-npx skills add leeguooooo/zentao-mcp -y -g
-pnpm i -g @leeguoo/zentao-mcp
+npx skills add BlackSuns/zentao-skill -y -g
+npm i -g @leeguoo/zentao-mcp
 ```
 
 Fallbacks:
 
 ```bash
-npm i -g @leeguoo/zentao-mcp
+pnpm i -g @leeguoo/zentao-mcp
 npx -y @leeguoo/zentao-mcp --help
 ```
 
@@ -84,7 +93,7 @@ zentao executions list
 zentao bugs list --product 6
 zentao bugs mine --status active --include-details
 zentao bugs stats --product-ids 1,2 --group-by product|person [--from DATE] [--to DATE]
-zentao bug get|create|resolve|assign|comment|close|activate ...
+zentao bug get|images|create|resolve|assign|comment|close|activate ...
 zentao tasks list --execution 25
 zentao task get|create|start|finish|pause|close ...
 zentao stories list --product 3
@@ -115,7 +124,8 @@ zentao risks list|get ...
 ```bash
 zentao bugs list --product 6
 zentao bugs mine --scope assigned --status active --include-details
-zentao bug get --id 1329
+zentao bug get --id 1329 [--download-images]
+zentao bug images --id 1329 [--output-dir <path>]
 zentao bug create --product 6 --title "bug title" [--severity 3] [--pri 2] [--type codeerror] [--steps "..."] [--assigned-to account] [--opened-build trunk]
 zentao bug resolve --id 1329 --resolution fixed [--resolved-build trunk] [--assigned-to kelly] [--comment "..."]
 zentao bug assign --id 1329 --assigned-to rd-yitong [--comment "..."]
@@ -125,6 +135,25 @@ zentao bug comment --id 1329 --comment "已确认，等待修复"
 ```
 
 Resolution values: `fixed`, `bydesign`, `duplicate`, `postponed`, `notrepro`, `willnotfix`, `tostory`, `external`
+
+### Bug 截图与多模态读图 (Bug Images)
+
+很多前端与业务 Bug 在重现步骤（steps）中只有截图。本工具支持自动鉴权并下载图片至本地：
+
+```bash
+# 下载 Bug 关联的所有截图与图片附件（默认保存在 .zentao-images/<bugId>/）
+zentao bug images --id 40175
+
+# 指定保存路径
+zentao bug images --id 40175 --output-dir ./temp-bug-images
+
+# 获取 Bug 详情的同时自动下载截图
+zentao bug get --id 40175 --download-images
+
+# 结合 read 工具查看图片（AI 常用工作流）
+# 1. zentao bug images --id 40175
+# 2. read({ path: ".zentao-images/40175/40175_img_1_file-read-124035.png" })
+```
 
 ### Bug stats
 
@@ -249,4 +278,5 @@ When helping a user operationally, prefer this sequence:
 2. Ensure auth exists: `zentao whoami`
 3. If auth may be broken, run: `zentao self-test`
 4. Use the narrowest command that answers the request.
-5. Add `--json` when the caller needs structured output for follow-up automation.
+5. If investigating a UI/visual bug, run: `zentao bug images --id <id>` and read the downloaded image.
+6. Add `--json` when the caller needs structured output for follow-up automation.
