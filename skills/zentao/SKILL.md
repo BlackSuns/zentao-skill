@@ -123,7 +123,7 @@ zentao risks list|get ...
 
 ```bash
 zentao bugs list --product 6 [--status active|resolved|unclosed|all] [--assigned-to account] [--opened-by account] [--keyword text] [--page N] [--limit N] [--json]
-zentao bugs mine --scope assigned --status active --include-details
+zentao bugs mine [--scope assigned|opened|resolved|all] [--status active|resolved|closed|all] [--product <id>] [--summary] [--json]
 zentao bug get --id 1329 [--download-images]
 zentao bug images --id 1329 [--output-dir <path>]
 zentao bug create --product 6 --title "bug title" [--severity 3] [--pri 2] [--type codeerror] [--steps "..."] [--assigned-to account] [--opened-build trunk]

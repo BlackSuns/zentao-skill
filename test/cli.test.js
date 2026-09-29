@@ -9,7 +9,7 @@ import { listProducts } from "../src/zentao/products.js";
 import { getConfigPath, loadConfig, saveConfig } from "../src/config/store.js";
 import { formatProductsSimple } from "../src/commands/products.js";
 import { formatBugsMineSimple, formatBugsSimple, formatStatsSimple } from "../src/commands/bugs.js";
-import { bugsStats, resolveBug, listBugs } from "../src/zentao/bugs.js";
+import { bugsStats, resolveBug, listBugs, bugsMine } from "../src/zentao/bugs.js";
 import { formatBugSimple } from "../src/commands/bug.js";
 import { readFileSync } from "node:fs";
 
@@ -115,6 +115,88 @@ test("ZentaoClient listProducts uses token then GET products", async () => {
     assert.ok(calls[0].url.endsWith("/api.php/v1/tokens"));
     assert.ok(calls[1].url.includes("/api.php/v1/products"));
     assert.equal(calls[1].options?.headers?.Token, "t_abc");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("bugsMine queries fast /my-bug route and includes shadow products", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const s = String(url);
+    if (s.endsWith("/api.php/v1/tokens")) {
+      return { text: async () => JSON.stringify({ token: "t_abc" }) };
+    }
+    if (s.includes("/my-bug-assignedTo")) {
+      return {
+        text: async () =>
+          JSON.stringify({
+            status: "success",
+            data: JSON.stringify({
+              bugs: {
+                "41513": {
+                  id: 41513,
+                  title: "Shadow bug",
+                  product: 142,
+                  productName: "AI Project",
+                  status: "active",
+                  assignedTo: "leo",
+                },
+              },
+              pager: { recTotal: 1, pageTotal: 1 },
+            }),
+          }),
+      };
+    }
+    return { text: async () => JSON.stringify({ error: "unexpected" }) };
+  };
+
+  try {
+    const client = new ZentaoClient({
+      baseUrl: "https://example.com/zentao",
+      account: "leo",
+      password: "pw",
+    });
+    const res = await bugsMine(client, { scope: "assigned", status: "active", includeDetails: true });
+    assert.equal(res.status, 1);
+    assert.equal(res.result.total, 1);
+    assert.equal(res.result.products[0].id, 142);
+    assert.equal(res.result.products[0].name, "AI Project");
+    assert.equal(res.result.bugs[0].id, 41513);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("bugsStats resolves shadow product not in listProducts", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const s = String(url);
+    if (s.endsWith("/api.php/v1/tokens")) {
+      return { text: async () => JSON.stringify({ token: "t_abc" }) };
+    }
+    if (s.includes("/api.php/v1/products/142")) {
+      return { text: async () => JSON.stringify({ id: 142, name: "Shadow Prod" }) };
+    }
+    if (s.includes("/api.php/v1/products")) {
+      return { text: async () => JSON.stringify({ products: [{ id: 1, name: "Prod 1" }] }) };
+    }
+    if (s.includes("/api.php/v1/bugs")) {
+      return { text: async () => JSON.stringify({ bugs: [{ id: 10, resolution: "fixed", status: "resolved" }], total: 1 }) };
+    }
+    return { text: async () => JSON.stringify({}) };
+  };
+
+  try {
+    const client = new ZentaoClient({
+      baseUrl: "https://example.com/zentao",
+      account: "leo",
+      password: "pw",
+    });
+    const res = await bugsStats(client, { productIds: [142], groupBy: "product" });
+    assert.equal(res.status, 1);
+    assert.equal(res.result.groups[0].productId, 142);
+    assert.equal(res.result.groups[0].productName, "Shadow Prod");
   } finally {
     globalThis.fetch = originalFetch;
   }

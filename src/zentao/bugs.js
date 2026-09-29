@@ -292,8 +292,21 @@ export async function bugsStats(client, { productIds, groupBy, from, to, perPage
   if (productsResponse.status !== 1) return productsResponse;
   const allProducts = productsResponse.result.products || [];
 
+  const productMap = new Map(allProducts.map((p) => [Number(p.id), p]));
+  for (const pid of productIds) {
+    const numId = Number(pid);
+    if (!productMap.has(numId)) {
+      try {
+        const prodRes = await client.request({ method: "GET", path: `/api.php/v1/products/${numId}` });
+        if (prodRes && prodRes.id && !prodRes.error) {
+          productMap.set(numId, prodRes);
+        }
+      } catch {}
+    }
+  }
+
   const productSet = new Set(productIds.map((id) => Number(id)));
-  const products = allProducts.filter((p) => productSet.has(Number(p.id)));
+  const products = Array.from(productSet).map((id) => productMap.get(id)).filter(Boolean);
 
   if (!products.length) {
     return normalizeError("No matching products found for the given product-ids");
@@ -447,6 +460,32 @@ export async function bugsStats(client, { productIds, groupBy, from, to, perPage
   return normalizeError(`Unknown group-by value: ${groupBy}. Use "product" or "person".`);
 }
 
+async function fetchMyBugsTab(client, { type, maxItems, perPage }) {
+  const pageSize = Math.min(Math.max(toInt(perPage, 100), 20), 200);
+  const maxCollect = toInt(maxItems, 200);
+  let page = 1;
+  const bugs = [];
+  let pageTotal = 1;
+
+  while (page <= pageTotal && bugs.length < maxCollect) {
+    const path = `/my-bug-${type}-0-id_desc-0-${pageSize}-${page}.json`;
+    const res = await client.request({ method: "GET", path });
+    if (!res || !res.data) break;
+    const data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+    const pageBugs = Object.values(data.bugs || {});
+    for (const bug of pageBugs) {
+      bugs.push(bug);
+      if (bugs.length >= maxCollect) break;
+    }
+    if (data.pager) {
+      pageTotal = Number(data.pager.pageTotal) || 1;
+    }
+    if (pageBugs.length === 0 || pageBugs.length < pageSize) break;
+    page += 1;
+  }
+  return bugs;
+}
+
 export async function bugsMine(client, { account, scope, status, productIds, includeZero, perPage, maxItems, includeDetails }) {
   const { listProducts } = await import("./products.js");
 
@@ -458,22 +497,127 @@ export async function bugsMine(client, { account, scope, status, productIds, inc
     statusList.map((item) => String(item).trim().toLowerCase()).filter(Boolean)
   );
   const allowAllStatus = statusSet.has("all") || statusSet.size === 0;
-
-  const productsResponse = await listProducts(client, { page: 1, limit: 1000 });
-  if (productsResponse.status !== 1) return productsResponse;
-  const products = productsResponse.result.products || [];
+  const isCurrentUser = !account || matchesAccount(account, client.account);
 
   const productSet = Array.isArray(productIds) && productIds.length
     ? new Set(productIds.map((id) => Number(id)))
     : null;
+
+  // Fast path: query native /my-bug endpoint for current user (includes shadow products)
+  if (isCurrentUser) {
+    try {
+      const scopesToFetch = [];
+      if (targetScope === "assigned") scopesToFetch.push("assignedTo");
+      else if (targetScope === "opened") scopesToFetch.push("openedBy");
+      else if (targetScope === "resolved") scopesToFetch.push("resolvedBy");
+      else if (targetScope === "closed") scopesToFetch.push("closedBy");
+      else if (targetScope === "all") scopesToFetch.push("assignedTo", "openedBy", "resolvedBy", "closedBy");
+      else scopesToFetch.push("assignedTo");
+
+      const fetchedMap = new Map();
+      for (const tabType of scopesToFetch) {
+        const tabBugs = await fetchMyBugsTab(client, { type: tabType, maxItems, perPage });
+        for (const b of tabBugs) {
+          if (!fetchedMap.has(Number(b.id))) {
+            fetchedMap.set(Number(b.id), b);
+          }
+        }
+      }
+
+      const allDirectBugs = Array.from(fetchedMap.values());
+      const matches = allDirectBugs.filter((bug) => {
+        if (!allowAllStatus) {
+          const bugStatus = String(bug.status || "").trim().toLowerCase();
+          if (!statusSet.has(bugStatus)) return false;
+        }
+        if (productSet && !productSet.has(Number(bug.product))) {
+          return false;
+        }
+        return true;
+      });
+
+      const productMap = new Map();
+      for (const bug of matches) {
+        const pid = Number(bug.product);
+        if (!productMap.has(pid)) {
+          productMap.set(pid, {
+            id: pid,
+            name: bug.productName || `Product #${pid}`,
+            totalBugs: 0,
+            myBugs: 0,
+          });
+        }
+        productMap.get(pid).myBugs += 1;
+      }
+
+      const bugs = [];
+      const maxCollect = toInt(maxItems, 200);
+      if (includeDetails) {
+        for (const bug of matches) {
+          if (bugs.length >= maxCollect) break;
+          bugs.push({
+            id: Number(bug.id),
+            title: bug.title,
+            product: Number(bug.product),
+            productName: bug.productName || "",
+            status: bug.status,
+            pri: bug.pri,
+            severity: bug.severity,
+            assignedTo: bug.assignedTo,
+            openedBy: bug.openedBy,
+            resolvedBy: bug.resolvedBy,
+            resolution: bug.resolution || "",
+            openedDate: bug.openedDate || "",
+            resolvedDate: bug.resolvedDate || "",
+          });
+        }
+      }
+
+      return normalizeResult({
+        account: matchAccount,
+        scope: targetScope,
+        status: allowAllStatus ? "all" : Array.from(statusSet),
+        total: matches.length,
+        products: Array.from(productMap.values()),
+        bugs,
+      });
+    } catch {
+      // Fall back to product iteration below if /my-bug fails
+    }
+  }
+
+  // Fallback path: iterate products
+  const productsResponse = await listProducts(client, { page: 1, limit: 1000 });
+  if (productsResponse.status !== 1) return productsResponse;
+  const products = productsResponse.result.products || [];
+  const productMap = new Map(products.map((p) => [Number(p.id), p]));
+
+  if (productSet) {
+    for (const pid of productSet) {
+      if (!productMap.has(pid)) {
+        try {
+          const prodRes = await client.request({ method: "GET", path: `/api.php/v1/products/${pid}` });
+          if (prodRes && prodRes.id && !prodRes.error) {
+            productMap.set(pid, prodRes);
+          } else {
+            productMap.set(pid, { id: pid, name: `Product #${pid}`, totalBugs: 0 });
+          }
+        } catch {
+          productMap.set(pid, { id: pid, name: `Product #${pid}`, totalBugs: 0 });
+        }
+      }
+    }
+  }
+  const productsToScan = productSet
+    ? Array.from(productSet).map((id) => productMap.get(id)).filter(Boolean)
+    : products;
 
   const rows = [];
   const bugs = [];
   let totalMatches = 0;
   const maxCollect = toInt(maxItems, 200);
 
-  for (const product of products) {
-    if (productSet && !productSet.has(Number(product.id))) continue;
+  for (const product of productsToScan) {
     const { bugs: productBugs } = await fetchAllBugsForProduct(client, {
       product: product.id,
       perPage,
@@ -487,10 +631,11 @@ export async function bugsMine(client, { account, scope, status, productIds, inc
       const assigned = matchesAccount(bug.assignedTo, matchAccount);
       const opened = matchesAccount(bug.openedBy, matchAccount);
       const resolved = matchesAccount(bug.resolvedBy, matchAccount);
+      const closed = matchesAccount(bug.closedBy, matchAccount);
       if (targetScope === "assigned") return assigned;
       if (targetScope === "opened") return opened;
       if (targetScope === "resolved") return resolved;
-      return assigned || opened || resolved;
+      return assigned || opened || resolved || closed;
     });
 
     if (!includeZero && matches.length === 0) continue;
@@ -510,13 +655,16 @@ export async function bugsMine(client, { account, scope, status, productIds, inc
           id: bug.id,
           title: bug.title,
           product: bug.product,
+          productName: product.name,
           status: bug.status,
           pri: bug.pri,
           severity: bug.severity,
           assignedTo: bug.assignedTo,
           openedBy: bug.openedBy,
           resolvedBy: bug.resolvedBy,
+          resolution: bug.resolution || "",
           openedDate: bug.openedDate,
+          resolvedDate: bug.resolvedDate || "",
         });
       }
     }

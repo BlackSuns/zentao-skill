@@ -25,10 +25,10 @@ function printHelp() {
     `  zentao bugs list --product <id> [--status active|resolved|unclosed|all] [--assigned-to account] [--opened-by account] [--keyword text] [--page N] [--limit N] [--json]\n`
   );
   process.stdout.write(
-    `  zentao bugs mine [--scope assigned|opened|resolved|all] [--status active|resolved|closed|all] [--account <account>] [--product-ids 1,2] [--include-zero] [--per-page N] [--max-items N] [--limit N] [--include-details] [--json]\n`
+    `  zentao bugs mine [--scope assigned|opened|resolved|all] [--status active|resolved|closed|all] [--account <account>] [--product <id>|--product-ids 1,2] [--include-zero] [--summary] [--limit N] [--include-details] [--json]\n`
   );
   process.stdout.write(
-    `  zentao bugs stats --product-ids 1,2 --group-by product|person [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--json]\n`
+    `  zentao bugs stats --product-ids 1,2 --group-by product|person [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--per-page N] [--json]\n`
   );
 }
 
@@ -39,20 +39,24 @@ function formatAccount(value) {
   return "";
 }
 
-export function formatBugsSimple(bugs) {
+export function formatBugsSimple(bugs, { showProduct = false } = {}) {
   const rows = [];
-  rows.push(["id", "title", "status", "pri", "severity", "assignedTo"].join("\t"));
+  const headers = ["id", "title", "status", "pri", "severity", "assignedTo"];
+  if (showProduct) headers.push("product");
+  rows.push(headers.join("\t"));
   for (const bug of bugs) {
-    rows.push(
-      [
-        String(bug?.id ?? ""),
-        String(bug?.title ?? ""),
-        String(bug?.status ?? ""),
-        String(bug?.pri ?? ""),
-        String(bug?.severity ?? ""),
-        formatAccount(bug?.assignedTo),
-      ].join("\t")
-    );
+    const row = [
+      String(bug?.id ?? ""),
+      String(bug?.title ?? ""),
+      String(bug?.status ?? ""),
+      String(bug?.pri ?? ""),
+      String(bug?.severity ?? ""),
+      formatAccount(bug?.assignedTo),
+    ];
+    if (showProduct) {
+      row.push(String(bug?.productName || bug?.product || ""));
+    }
+    rows.push(row.join("\t"));
   }
   return `${rows.join("\n")}\n`;
 }
@@ -78,7 +82,7 @@ export function formatBugsMineSimple(result) {
   if (bugs.length) {
     rows.push("");
     rows.push("bugs");
-    rows.push(formatBugsSimple(bugs).trimEnd());
+    rows.push(formatBugsSimple(bugs, { showProduct: true }).trimEnd());
   }
 
   return `${rows.join("\n")}\n`;
@@ -216,9 +220,9 @@ export async function runBugs({ argv = [], env = process.env } = {}) {
   }
 
   if (sub === "mine") {
-    const includeDetails = Boolean(cliArgs["include-details"]);
+    const includeDetails = cliArgs.summary || cliArgs["no-details"] ? false : true;
     const includeZero = Boolean(cliArgs["include-zero"]);
-    const productIds = parseCsvIntegers(cliArgs["product-ids"]);
+    const productIds = parseCsvIntegers(cliArgs["product-ids"] || cliArgs.products || cliArgs.product);
     const perPage = cliArgs["per-page"];
     const maxItems = cliArgs["max-items"] ?? cliArgs.limit;
     const result = await bugsMine(api, {
@@ -233,6 +237,37 @@ export async function runBugs({ argv = [], env = process.env } = {}) {
     });
 
     if (cliArgs.json) {
+      if (!cliArgs.full && !cliArgs.raw && Array.isArray(result?.result?.bugs)) {
+        const cleanedBugs = result.result.bugs.map((b) => ({
+          id: b.id,
+          title: b.title,
+          product: b.product,
+          productName: b.productName || "",
+          status: b.status,
+          pri: b.pri,
+          severity: b.severity,
+          assignedTo: formatAccount(b.assignedTo),
+          openedBy: formatAccount(b.openedBy),
+          resolvedBy: formatAccount(b.resolvedBy),
+          resolution: b.resolution || "",
+          openedDate: b.openedDate || "",
+          resolvedDate: b.resolvedDate || "",
+        }));
+        const compactResult = {
+          ...result,
+          result: {
+            ...result.result,
+            bugs: cleanedBugs,
+          },
+        };
+        const pretty = JSON.stringify(compactResult, null, 2);
+        if (pretty.length > 20000) {
+          process.stdout.write(`${JSON.stringify(compactResult)}\n`);
+        } else {
+          process.stdout.write(`${pretty}\n`);
+        }
+        return;
+      }
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       return;
     }
@@ -242,7 +277,7 @@ export async function runBugs({ argv = [], env = process.env } = {}) {
   }
 
   if (sub === "stats") {
-    const productIds = parseCsvIntegers(cliArgs["product-ids"]);
+    const productIds = parseCsvIntegers(cliArgs["product-ids"] || cliArgs.products || cliArgs.product);
     if (!productIds || !productIds.length) throw new Error("Missing --product-ids");
     const groupBy = cliArgs["group-by"] || "product";
     if (groupBy !== "product" && groupBy !== "person") {
