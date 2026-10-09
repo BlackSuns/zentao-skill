@@ -34,6 +34,8 @@ export function printRootHelp() {
   process.stdout.write(`  zentao issues list|get [--json]\n`);
   process.stdout.write(`  zentao risks list|get [--json]\n`);
   process.stdout.write(`  zentao self-test [--expected N]\n`);
+  process.stdout.write(`  zentao self-update [--check] [--to VERSION] [--yes] [--json]\n`);
+  process.stdout.write(`  zentao --version\n`);
   process.stdout.write(`  zentao release [patch|minor|major] [--dry-run] [--yes]\n\n`);
   process.stdout.write(`Auth options:\n`);
   process.stdout.write(`  --zentao-url        or env ZENTAO_URL\n`);
@@ -65,7 +67,8 @@ export function printRootHelp() {
   process.stdout.write(`  issues              project issues (list/get)\n`);
   process.stdout.write(`  risks               project risks (list/get)\n`);
   process.stdout.write(`  self-test           run a basic API roundtrip\n`);
-  process.stdout.write(`  release             version bump + tag + gh release + npm publish\n`);
+  process.stdout.write(`  self-update         update this installed CLI (alias: upgrade)\n`);
+  process.stdout.write(`  release             maintainers only: version bump + tag + gh release + npm publish\n`);
 }
 
 export function printSelfTestHelp() {
@@ -89,4 +92,23 @@ export function printReleaseHelp() {
   process.stdout.write(`  --skip-github-release do not create GitHub release\n`);
   process.stdout.write(`  --skip-publish        do not npm publish\n`);
   process.stdout.write(`  --help, -h            show help\n`);
+}
+
+export function printSelfUpdateHelp() {
+  process.stdout.write(`zentao self-update - update the installed zentao CLI\n\n`);
+  process.stdout.write(`Usage:\n`);
+  process.stdout.write(`  zentao self-update --check [--json]      show installed and latest version, change nothing\n`);
+  process.stdout.write(`  zentao self-update [--yes] [--json]      update to the latest version\n`);
+  process.stdout.write(`  zentao self-update --to 0.7.0 [--yes]    install a specific version\n\n`);
+  process.stdout.write(`Options:\n`);
+  process.stdout.write(`  --check              only report current/target versions (alias: --dry-run)\n`);
+  process.stdout.write(`  --to VERSION         pin the target version instead of latest\n`);
+  process.stdout.write(`  --yes                skip the confirmation prompt (required without a TTY)\n`);
+  process.stdout.write(`  --json               machine-readable result\n`);
+  process.stdout.write(`  --help, -h           show help\n\n`);
+  process.stdout.write(`Only reads public npm registry metadata and runs the package manager that\n`);
+  process.stdout.write(`installed this copy (npm -g or pnpm -g). It never logs in to ZenTao, never\n`);
+  process.stdout.write(`touches ~/.config/zentao, and never publishes anything. npx, git checkouts and\n`);
+  process.stdout.write(`unknown installs get manual instructions instead. The agent skill is updated\n`);
+  process.stdout.write(`separately: npx skills add leeguooooo/zentao-mcp -y -g\n`);
 }

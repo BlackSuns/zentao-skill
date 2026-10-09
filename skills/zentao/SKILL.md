@@ -51,6 +51,17 @@ npx -y @leeguoo/zentao-mcp --help
 
 `skills add` installs the skill definition; the CLI still needs to be available as `zentao` in PATH for normal usage.
 
+## Updating
+
+```bash
+zentao self-update --check --json   # current/target versions, changes nothing
+zentao self-update --yes --json     # update via the npm/pnpm that installed it
+zentao self-update --to 0.7.0 --yes # pin a version
+npx skills add leeguooooo/zentao-mcp -y -g   # refresh this skill (overwrites local SKILL.md edits)
+```
+
+`self-update` never logs in, never touches `~/.config/zentao`, and never publishes anything. For npx, git checkouts, or installs it cannot identify it only prints manual instructions. Do not use `zentao release` to update: that is the maintainer publish command. Never switch the user to the official zentao-cli without asking.
+
 ## Login
 
 ```bash

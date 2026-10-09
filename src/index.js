@@ -4,6 +4,7 @@ import { extractCommand, hasHelpFlag } from "./cli/args.js";
 import { printRootHelp } from "./cli/help.js";
 import { runSelfTest } from "./commands/selftest.js";
 import { runRelease } from "./commands/release.js";
+import { readInstalledVersion, runSelfUpdate } from "./commands/selfupdate.js";
 import { runProducts } from "./commands/products.js";
 import { runBugs } from "./commands/bugs.js";
 import { runBug } from "./commands/bug.js";
@@ -30,6 +31,8 @@ import { runRisks } from "./commands/risks.js";
 
 const COMMANDS = {
   "self-test": runSelfTest,
+  "self-update": runSelfUpdate,
+  upgrade: runSelfUpdate,
   release: runRelease,
   login: runLogin,
   whoami: runWhoami,
@@ -75,7 +78,12 @@ async function main() {
   const argv = process.argv.slice(2);
   const { command, argv: argvWithoutCommand } = extractCommand(argv);
 
-  if (!command || hasHelpFlag(argv) || command === "help") {
+  if (command === "version" || (!command && (argv.includes("--version") || argv.includes("-v")))) {
+    process.stdout.write(`${readInstalledVersion()}\n`);
+    return 0;
+  }
+
+  if (!command || command === "help" || (hasHelpFlag(argv) && command !== "self-update" && command !== "upgrade")) {
     printRootHelp();
     return 0;
   }
@@ -90,7 +98,7 @@ async function main() {
 try {
   process.exitCode = await main();
 } catch (error) {
-  process.stderr.write(`${error?.message || String(error)}\n`);
+  if (!error?.silent) process.stderr.write(`${error?.message || String(error)}\n`);
   process.exitCode = error?.exitCode || 1;
 }
 scheduleExitFallback(process.exitCode || 0);

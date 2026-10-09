@@ -39,6 +39,21 @@ npx -y @leeguoo/zentao-mcp --help
 
 `skills add` 只负责安装 skill 文件；CLI 仍然建议全局安装后直接用 `zentao` 命令。
 
+## 升级
+
+```bash
+zentao self-update --check   # 只看当前版本和最新版本，不改任何东西
+zentao self-update           # 确认后用原来安装它的 npm / pnpm 升级（脚本里加 --yes）
+zentao self-update --to 0.7.0 --yes   # 装指定版本
+```
+
+- 只读取 npm registry 的公开版本信息，再调用当初安装它的包管理器（`npm i -g` 或 `pnpm add -g`）。npx 运行、git 源码目录或识别不出来的安装方式不会被改动，只给出手动升级命令。
+- 不登录禅道，不改 `~/.config/zentao/config.toml`，不发版。升级后会核对版本并离线跑一次 `--help`，失败就装回原来的版本。
+- `--json` 输出 `current` / `target` / `result` 等字段，方便脚本和 AI 助手读取。
+- skill 文件要单独更新：重新执行 `npx skills add leeguooooo/zentao-mcp -y -g`（会覆盖你对 SKILL.md 的本地修改）。
+- `zentao release` 是维护者发版用的，不是升级命令。
+- 本包已停止新功能开发；`self-update` 只会升级本包，不会自动换成官方 `zentao-cli`。
+
 ## 登录
 
 只需登录一次，凭据会保存到本地配置文件：
@@ -134,6 +149,7 @@ zentao self-test
 zentao login --zentao-url=... --zentao-account=... --zentao-password=...
 zentao whoami
 zentao self-test
+zentao self-update --check
 
 zentao products list
 zentao programs list
