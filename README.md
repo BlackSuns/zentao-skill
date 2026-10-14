@@ -35,6 +35,20 @@ node src/index.js --help
 
 `skills add` 负责安装 AI Skill 定义；CLI 建议全局安装或 link 后直接在终端使用 `zentao` 命令。
 
+## 升级
+
+```bash
+zentao self-update --check   # 只看当前版本和最新版本，不改任何东西
+zentao self-update           # 确认后用原来安装它的 npm / pnpm 升级（脚本里加 --yes）
+zentao self-update --to 0.7.0 --yes   # 装指定版本
+```
+
+- 只读取 npm registry 的公开版本信息，再调用当初安装它的包管理器（`npm i -g` 或 `pnpm add -g`）。npx 运行、git 源码目录或识别不出来的安装方式不会被改动，只给出手动升级命令。
+- 不登录禅道，不改 `~/.config/zentao/config.toml`，不发版。升级后会核对版本并离线跑一次 `--help`，失败就装回原来的版本。
+- `--json` 输出 `current` / `target` / `result` 等字段，方便脚本和 AI 助手读取。
+- skill 文件要单独更新：重新执行 `npx skills add BlackSuns/zentao-skill -y -g`（会覆盖你对 SKILL.md 的本地修改）。
+- `zentao release` 是维护者发版用的，不是升级命令。
+
 ## 登录
 
 只需登录一次，凭据会保存到本地配置文件：
@@ -55,25 +69,6 @@ zentao whoami
 ```
 
 配置文件位置：`~/.config/zentao/config.toml`
-
-## 🌟 核心特色：Bug 截图自动鉴权下载与多模态分析
-
-许多前端/UI 界面缺陷 Bug 在重现步骤中往往只有截图，而禅道系统对附件图片加了权限校验，外部工具无法直接读取。
-
-本工具提供原生截图解析与免密下载能力：
-
-```bash
-# 自动提取并下载 Bug 关联的所有截图与附件（默认保存在 .zentao-images/<bugId>/）
-zentao bug images --id 40175
-
-# 指定本地存放目录
-zentao bug images --id 40175 --output-dir ./my-bug-images
-
-# 查询 Bug 详情并一键拉取截图
-zentao bug get --id 40175 --download-images
-```
-
-结合 AI Agent 的多模态视觉能力（如 `read` 工具），AI 可以直接查看截图中的红线标注与界面错位，告别“盲猜代码”！
 
 ## 支持的能力
 
@@ -124,6 +119,23 @@ zentao bugs mine --status active
 zentao bugs mine --status active --include-details
 ```
 
+### Bug 截图下载与多模态分析
+
+前端与 UI 界面缺陷 Bug 在重现步骤中往往包含截图与红线标注，而禅道系统对附件图片加了权限校验，外部工具无法直接读取。本工具提供原生截图解析与鉴权下载能力：
+
+```bash
+# 自动提取并下载 Bug 关联的所有截图与附件（默认保存在 .zentao-images/<bugId>/）
+zentao bug images --id 40175
+
+# 指定本地存放目录
+zentao bug images --id 40175 --output-dir ./my-bug-images
+
+# 查询 Bug 详情并一键拉取截图
+zentao bug get --id 40175 --download-images
+```
+
+配合 AI Agent 的多模态视觉能力（如 `read` 工具），可直接读取图片排查界面错位与样式问题，避免纯文本猜测代码。
+
 ### 需要原始 JSON？
 
 任何命令后面加 `--json`：
@@ -149,6 +161,7 @@ zentao self-test
 zentao login --zentao-url=... --zentao-account=... --zentao-password=...
 zentao whoami
 zentao self-test
+zentao self-update --check
 
 zentao products list
 zentao programs list
