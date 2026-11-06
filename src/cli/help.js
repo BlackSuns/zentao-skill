@@ -27,7 +27,8 @@ export function printRootHelp() {
   process.stdout.write(`  zentao plans list|get --product <id> [--json]\n`);
   process.stdout.write(`  zentao releases list|get --product <id> [--json]\n`);
   process.stdout.write(`  zentao testcases list|get --product <id> [--json]\n`);
-  process.stdout.write(`  zentao testtasks list|get [--json]\n`);
+  process.stdout.write(`  zentao testtasks list [--keyword name] [--product <id>] [--status doing] [--json]\n`);
+  process.stdout.write(`  zentao testtask get|cases|case|run (--id <id|url> | --name <name>) ...\n`);
   process.stdout.write(`  zentao testsuites list|get --product <id> [--json]\n`);
   process.stdout.write(`  zentao departments list [--json]\n`);
   process.stdout.write(`  zentao docs libs|list|get ...\n`);
@@ -60,7 +61,8 @@ export function printRootHelp() {
   process.stdout.write(`  plans               product plans (list/get)\n`);
   process.stdout.write(`  releases            product releases (list/get)\n`);
   process.stdout.write(`  testcases           test cases (list/get)\n`);
-  process.stdout.write(`  testtasks           test tasks (list/get)\n`);
+  process.stdout.write(`  testtasks           test tasks (list/get, search by name)\n`);
+  process.stdout.write(`  testtask            one test task: cases (filter), case detail, run (record pass/fail)\n`);
   process.stdout.write(`  testsuites          test suites (list/get)\n`);
   process.stdout.write(`  departments         departments (list)\n`);
   process.stdout.write(`  docs                doc libs & docs (libs/list/get)\n`);

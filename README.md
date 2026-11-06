@@ -81,7 +81,8 @@ zentao whoami
 - 待办：列表、查询、创建、完成、关闭
 - 产品 / 项目 / 项目集 / 执行：列表，项目构建查询
 - 计划 / 发布：列表、详情
-- 测试用例 / 测试单 / 测试套件：列表、详情
+- 测试用例 / 测试单 / 测试套件：列表、详情；测试单按名称搜索
+- 测试单执行：按 id / 链接 / 名称定位测试单，列出全部用例，按执行结果、关键字、优先级筛选，提交通过 / 失败 / 阻塞 / 忽略
 - 文档库 / 文档：列表、详情
 - 用户 / 部门：列表
 - 问题 / 风险：列表、详情
@@ -135,6 +136,33 @@ zentao bug get --id 40175 --download-images
 ```
 
 配合 AI Agent 的多模态视觉能力（如 `read` 工具），可直接读取图片排查界面错位与样式问题，避免纯文本猜测代码。
+
+### 执行测试单
+
+测试单可以用 id、禅道页面链接或名称指定。名称匹配到多个测试单时会列出候选，不会自动挑选。用例列表会翻完所有分页，不受网页每页 20 条的限制。
+
+```bash
+# 查找测试单
+zentao testtasks list --keyword 生态市场 --product 142
+
+# 测试单概况：总数、未执行、通过、失败、阻塞
+zentao testtask get --id 1521
+zentao testtask get --name "生态市场功能"
+
+# 筛选用例：按执行结果（unrun / pass / fail / blocked / n/a / done / all，可逗号组合）与关键字
+zentao testtask cases --id 1521 --result unrun
+zentao testtask cases --id 1521 --keyword "Skill 下架" --result unrun,fail
+
+# 查看单条用例：标题、前置条件、步骤、历史执行记录
+zentao testtask case --run 43402 --history
+
+# 提交执行结果（fail / blocked 必须用 --real 写明实际结果）
+zentao testtask run --run 43402 --result pass
+zentao testtask run --run 43402,43403 --result pass
+zentao testtask run --run 43402 --result fail --real "点击下架后列表仍显示该 Skill"
+```
+
+`run` 是测试单内的执行 ID（列表中的 `run` 列），`case` 是用例 ID；`case` / `run` 子命令也可以用 `--case <用例ID> --id <测试单>` 定位。提交后会回读该执行记录，只有禅道确实记下新结果才报告成功。
 
 ### 需要原始 JSON？
 
@@ -206,6 +234,10 @@ zentao testcases list --product 3
 zentao testcases get --id 1
 zentao testtasks list
 zentao testtasks get --id 1
+zentao testtask get --id 1521
+zentao testtask cases --id 1521 --result unrun --keyword "关键字"
+zentao testtask case --run 43402
+zentao testtask run --run 43402 --result pass
 zentao testsuites list --product 3
 zentao testsuites get --id 1
 
@@ -235,6 +267,7 @@ zentao risks get --id 1
 - "帮我看执行 25 下有哪些任务"
 - "查一下产品 3 的需求 / 计划 / 发布"
 - "列出测试单、测试用例、测试套件"
+- "把测试单 1521 里还没执行的用例逐条验证，验证通过的点通过"
 - "看一下项目问题和风险"
 - "打开文档库 50 里的文档列表"
 

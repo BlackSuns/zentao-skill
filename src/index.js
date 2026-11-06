@@ -21,6 +21,7 @@ import { runProjects } from "./commands/projects.js";
 import { runTodos } from "./commands/todos.js";
 import { runTestcases } from "./commands/testcases.js";
 import { runTesttasks } from "./commands/testtasks.js";
+import { runTesttask } from "./commands/testtask.js";
 import { runTestsuites } from "./commands/testsuites.js";
 import { runPlans } from "./commands/plans.js";
 import { runReleases } from "./commands/releases.js";
@@ -50,6 +51,7 @@ const COMMANDS = {
   todos: runTodos,
   testcases: runTestcases,
   testtasks: runTesttasks,
+  testtask: runTesttask,
   testsuites: runTestsuites,
   plans: runPlans,
   releases: runReleases,
@@ -83,7 +85,8 @@ async function main() {
     return 0;
   }
 
-  if (!command || command === "help" || (hasHelpFlag(argv) && command !== "self-update" && command !== "upgrade")) {
+  // 已知子命令自己处理 --help（打印该命令的用法）；只有未带命令时才打印总帮助
+  if (!command || command === "help" || (hasHelpFlag(argv) && !COMMANDS[command])) {
     printRootHelp();
     return 0;
   }

@@ -28,6 +28,7 @@ Use this skill when the user asks anything about 禅道 / ZenTao, including:
 - products, programs, projects, executions
 - plans, releases, builds
 - test cases, test tasks, test suites
+- test task execution: list a test task's cases, filter by result/keyword, record pass/fail/blocked
 - docs and doc libraries
 - users and departments
 - issues and risks
@@ -40,6 +41,7 @@ Typical user asks include:
 - “统计一下 bug 解决率” / “看看各产品的 bug 解决情况”
 - “看一下产品、项目、执行、版本、计划、构建”
 - “查测试单、测试用例、测试套件”
+- “执行测试单 1521 里还没执行的用例” / “把这些用例点通过” / “转测前把测试单跑一遍”
 - “看文档库 / 文档 / 部门 / 用户”
 - “查问题 / 风险”
 - “帮我登录禅道” / “验证禅道连接”
@@ -114,6 +116,7 @@ zentao plans list|get ...
 zentao releases list|get ...
 zentao testcases list|get ...
 zentao testtasks list|get ...
+zentao testtask get|cases|case|run ...
 zentao testsuites list|get ...
 zentao docs libs|list|get ...
 zentao users list
@@ -244,11 +247,42 @@ zentao releases get --id 1
 ```bash
 zentao testcases list --product 3
 zentao testcases get --id 1
-zentao testtasks list
+zentao testtasks list --keyword "生态市场" [--product 142] [--status doing] [--owner account]
 zentao testtasks get --id 1
 zentao testsuites list --product 3
 zentao testsuites get --id 1
 ```
+
+### Test task execution (测试单执行)
+
+Select a test task by id, by its ZenTao page URL, or by name. A name that matches several test tasks returns the candidate list instead of guessing; pick one with `--id` or narrow with `--product`.
+
+```bash
+zentao testtask get --id 1521                     # summary: total / unrun / pass / fail / blocked
+zentao testtask get --name "生态市场功能"
+zentao testtask cases --id 1521 --result unrun    # cases still to execute (all pages are fetched)
+zentao testtask cases --id 1521 --keyword "Skill 下架" --result unrun,fail
+zentao testtask cases --id 1521 --pri 1,2 --json
+zentao testtask case --run 43402 [--history]      # one case: title, precondition, steps, past results
+zentao testtask run --run 43402 --result pass
+zentao testtask run --run 43402,43403 --result pass
+zentao testtask run --run 43402 --result fail --real "点击下架后列表仍显示该 Skill"
+zentao testtask run --case 61604 --id 1521 --result blocked --real "依赖的审批接口 500"
+```
+
+- `run` is the execution id inside the test task (column `run`); `case` is the test case id. `run` commands accept either `--run` or `--case` plus the test task.
+- `--result` filter values: `unrun`, `pass`, `fail`, `blocked`, `n/a`, `done` (executed with any result), `all`. Comma separate to combine.
+- `--keyword` searches title, precondition, keywords and story title; space separated words must all match.
+- In this ZenTao instance most cases have no steps: the title is the test step and `precondition` is the setup.
+- `run` reads the case back after submitting and only reports `ok` when ZenTao recorded the new result. `fail` and `blocked` require `--real` with what actually happened.
+
+Rules for AI agents executing a test task:
+
+1. List the work with `zentao testtask cases --id <id> --result unrun --json` and execute cases one at a time.
+2. Before recording a result, actually verify the behaviour (run the app, call the API, or inspect the code path). Never mark a case `pass` without having checked it.
+3. Record `pass` only for verified behaviour. Use `fail` with `--real` describing the observed behaviour, or `blocked` with `--real` naming what prevented testing. If a case cannot be judged, leave it unrun and report it to the user.
+4. Batch `--run a,b,c --result pass` only for cases that were each verified.
+5. Finish with `zentao testtask get --id <id>` and report the summary plus any fail/blocked/unrun cases.
 
 ## Organization & docs
 
