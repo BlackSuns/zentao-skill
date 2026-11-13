@@ -76,7 +76,7 @@ zentao whoami
 
 - 认证与连通性：`login`、`whoami`、`self-test`
 - Bug：列表、查询、**截图下载 (images)**、创建、指派、评论、解决、关闭、激活、查我的 Bug、解决率统计
-- 任务：列表、查询、创建、开始、完成、暂停、关闭
+ - 任务：列表、查询、创建、编辑/更新、开始、完成、暂停、关闭（支持预计开始/截止日期、关联需求、指派给我、迭代页面链接）
 - 需求：列表、查询、创建
 - 待办：列表、查询、创建、完成、关闭
 - 产品 / 项目 / 项目集 / 执行：列表，项目构建查询
@@ -136,6 +136,28 @@ zentao bug get --id 40175 --download-images
 ```
 
 配合 AI Agent 的多模态视觉能力（如 `read` 工具），可直接读取图片排查界面错位与样式问题，避免纯文本猜测代码。
+
+### 任务创建与管理 (Task)
+
+支持直接贴迭代页面链接，支持自然日期关键字（`today` / `今天` / `明天` 等），支持一键指派给自己（`--assigned-to me` 或 `指派给我`），支持挂关联研发需求（`--story`）：
+
+```bash
+# 在迭代里建任务（--execution 接受 ID 或页面 URL，支持自然日期与指派给自己）
+zentao task create \
+  --execution http://172.31.80.150:81/zentao/execution-task-2049.html \
+  --name "培训-AI的梦" \
+  --est-started today \
+  --deadline today \
+  --story 3816 \
+  --assigned-to me \
+  --estimate 2
+
+# 修改任务（更新截止日期、工时、需求或指派人）
+zentao task edit --id 82091 --deadline 2026-11-15 --estimate 4
+
+# 查询任务（--id 接受 ID 或页面 URL）
+zentao task get --id http://172.31.80.150:81/zentao/task-view-82091.html
+```
 
 ### 执行测试单
 
@@ -207,13 +229,14 @@ zentao bug close --id 1329
 zentao bug activate --id 1329
 zentao bug comment --id 1329 --comment "comment"
 
-zentao tasks list --execution 25
-zentao task get --id 388
-zentao task create --execution 25 --name "task name"
-zentao task start --id 388
-zentao task finish --id 388
-zentao task pause --id 388
-zentao task close --id 388
+zentao tasks list --execution 2049
+zentao task get --id 82091
+zentao task create --execution 2049 --name "task name" --est-started today --deadline today --story 3816 --assigned-to me
+zentao task edit --id 82091 --deadline 2026-11-15
+zentao task start --id 82091
+zentao task finish --id 82091 --finished-date today
+zentao task pause --id 82091
+zentao task close --id 82091
 
 zentao stories list --product 3
 zentao story get --id 1

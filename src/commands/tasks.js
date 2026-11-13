@@ -2,11 +2,12 @@ import process from "node:process";
 import { extractCommand, hasHelpFlag, parseCliArgs } from "../cli/args.js";
 import { createClientFromCli } from "../zentao/client.js";
 import { listTasks } from "../zentao/tasks.js";
+import { parseExecutionRef } from "../zentao/normalize.js";
 
 function printHelp() {
   process.stdout.write(`zentao tasks <subcommand>\n\n`);
   process.stdout.write(`Usage:\n`);
-  process.stdout.write(`  zentao tasks list --execution <id> [--page N] [--limit N] [--json]\n`);
+  process.stdout.write(`  zentao tasks list --execution <id|url> [--page N] [--limit N] [--json]\n`);
 }
 
 function formatAccount(value) {
@@ -18,7 +19,7 @@ function formatAccount(value) {
 
 export function formatTasksSimple(tasks) {
   const rows = [];
-  rows.push(["id", "name", "status", "pri", "assignedTo", "estimate", "consumed", "left"].join("\t"));
+  rows.push(["id", "name", "status", "pri", "assignedTo", "estStarted", "deadline", "estimate", "consumed", "left"].join("\t"));
   for (const task of tasks) {
     rows.push(
       [
@@ -27,6 +28,8 @@ export function formatTasksSimple(tasks) {
         String(task?.status ?? ""),
         String(task?.pri ?? ""),
         formatAccount(task?.assignedTo),
+        String(task?.estStarted ?? ""),
+        String(task?.deadline ?? ""),
         String(task?.estimate ?? ""),
         String(task?.consumed ?? ""),
         String(task?.left ?? ""),
@@ -47,8 +50,10 @@ export async function runTasks({ argv = [], env = process.env } = {}) {
   const api = createClientFromCli({ argv: argvWithoutSub, env });
 
   if (sub === "list") {
-    const execution = cliArgs.execution;
-    if (!execution) throw new Error("Missing --execution");
+    const rawExecution = cliArgs.execution;
+    if (!rawExecution) throw new Error("Missing --execution");
+    const execution = parseExecutionRef(rawExecution);
+    if (!execution) throw new Error(`Invalid --execution "${rawExecution}". Use execution ID or execution page URL.`);
     const result = await listTasks(api, {
       execution,
       page: cliArgs.page,

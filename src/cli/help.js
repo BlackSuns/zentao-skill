@@ -15,8 +15,8 @@ export function printRootHelp() {
   process.stdout.write(
     `  zentao bugs stats --product-ids 1,2 --group-by product|person [--from DATE] [--to DATE] [--json]\n`
   );
-  process.stdout.write(`  zentao task get|create|start|finish|close ...\n`);
-  process.stdout.write(`  zentao tasks list --execution <id> [--json]\n`);
+  process.stdout.write(`  zentao task get|create|edit|start|finish|close ...\n`);
+  process.stdout.write(`  zentao tasks list --execution <id|url> [--json]\n`);
   process.stdout.write(`  zentao story get|create ...\n`);
   process.stdout.write(`  zentao stories list --product <id> [--json]\n`);
   process.stdout.write(`  zentao users list [--json]\n`);
@@ -49,7 +49,7 @@ export function printRootHelp() {
   process.stdout.write(`  products            ZenTao products\n`);
   process.stdout.write(`  bugs                ZenTao bugs\n`);
   process.stdout.write(`  bug                 ZenTao bug (get/images/resolve/assign/comment/create/close/activate)\n`);
-  process.stdout.write(`  task                ZenTao task (get/create/start/finish/close)\n`);
+  process.stdout.write(`  task                ZenTao task (get/create/edit/start/finish/pause/close)\n`);
   process.stdout.write(`  tasks               ZenTao tasks (list)\n`);
   process.stdout.write(`  story               ZenTao story (get/create)\n`);
   process.stdout.write(`  stories             ZenTao stories (list)\n`);

@@ -22,7 +22,7 @@ Use this skill when the user asks anything about 禅道 / ZenTao, including:
 
 - bugs: list, mine, stats, get, images, create, resolve, assign, comment, close, activate
 - bug images: download and inspect screenshots/attachments for UI bugs
-- tasks: list, get, create, start, finish, pause, close
+ - tasks: list, get, create, edit, start, finish, pause, close (with estStarted, deadline, story, assignedTo me, and execution URL support)
 - stories: list, get, create
 - todos: list, get, create, finish, close
 - products, programs, projects, executions
@@ -42,6 +42,7 @@ Typical user asks include:
 - “看一下产品、项目、执行、版本、计划、构建”
 - “查测试单、测试用例、测试套件”
 - “执行测试单 1521 里还没执行的用例” / “把这些用例点通过” / “转测前把测试单跑一遍”
+- “在迭代 2049 里建一个任务，今天开始今天结束，挂需求 3816 指派给我” / “改一下任务的截止日期”
 - “看文档库 / 文档 / 部门 / 用户”
 - “查问题 / 风险”
 - “帮我登录禅道” / “验证禅道连接”
@@ -196,14 +197,23 @@ zentao bugs stats --product-ids 1,2 --group-by product --json
 ## Task commands
 
 ```bash
-zentao tasks list --execution 25
-zentao task get --id 388
-zentao task create --execution 25 --name "task name" [--assigned-to account] [--pri 3] [--estimate 8] [--type devel] [--desc "..."]
-zentao task start --id 388 [--consumed 2] [--left 6]
-zentao task finish --id 388 [--finished-date "2026-04-08"] [--consumed 8]
-zentao task pause --id 388
-zentao task close --id 388 [--comment "done"]
+zentao tasks list --execution 2049                # --execution accepts ID or URL (execution-task-2049.html)
+zentao task get --id 82091                        # --id accepts ID or URL (task-view-82091.html)
+zentao task create --execution 2049 --name "培训-AI的梦" \
+  [--est-started today|YYYY-MM-DD] [--deadline today|YYYY-MM-DD] \
+  [--story 3816] [--assigned-to me|account] \
+  [--pri 3] [--estimate 2] [--type devel] [--desc "..."]
+zentao task edit --id 82091 [--name "..."] [--est-started YYYY-MM-DD|today] [--deadline YYYY-MM-DD|today] [--story 3816] [--assigned-to me] [--pri N] [--estimate N] [--desc "..."]
+zentao task start --id 82091 [--consumed 2] [--left 6]
+zentao task finish --id 82091 [--finished-date today|YYYY-MM-DD] [--consumed 2]
+zentao task pause --id 82091
+zentao task close --id 82091 [--comment "done"]
 ```
+
+- `--execution` and `--id` accept numeric IDs or ZenTao browser URLs (e.g. `http://.../execution-task-2049.html` or `http://.../task-view-82091.html`).
+- `--est-started` (alias `--begin`) and `--deadline` (alias `--end`) accept dates (`YYYY-MM-DD`) or keywords `today` / `今天` / `tomorrow` / `明天`.
+- `--story` links the task to a story ID or URL. If an execution requires tasks to link to a story, pass `--story <id>`.
+- `--assigned-to` accepts `me` or `指派给我` to automatically assign to the currently logged in account.
 
 ## Story commands
 
