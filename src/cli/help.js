@@ -6,6 +6,7 @@ export function printRootHelp() {
   process.stdout.write(`Usage:\n`);
   process.stdout.write(`  zentao login [--zentao-url ... --zentao-account ... --zentao-password ...] [--yes]\n`);
   process.stdout.write(`  zentao whoami\n`);
+  process.stdout.write(`  zentao search <words> [--type all|task|bug|story|case|testtask|...] [--limit N] [--json]\n`);
   process.stdout.write(`  zentao products list [--page N] [--limit N] [--json]\n`);
   process.stdout.write(`  zentao bugs list --product <id> [--page N] [--limit N] [--json]\n`);
   process.stdout.write(`  zentao bug get|images|resolve|assign|comment|create|close|activate ...\n`);
@@ -46,6 +47,7 @@ export function printRootHelp() {
   process.stdout.write(`Subcommands:\n`);
   process.stdout.write(`  login               save credentials locally\n`);
   process.stdout.write(`  whoami              show current account\n`);
+  process.stdout.write(`  search              global full-text search (filter noise without explicit assignment)\n`);
   process.stdout.write(`  products            ZenTao products\n`);
   process.stdout.write(`  bugs                ZenTao bugs\n`);
   process.stdout.write(`  bug                 ZenTao bug (get/images/resolve/assign/comment/create/close/activate)\n`);

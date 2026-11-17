@@ -75,6 +75,7 @@ zentao whoami
 当前 CLI 已支持这些对象和动作：
 
 - 认证与连通性：`login`、`whoami`、`self-test`
+- 全局全文检索：`search`（没有明确指派时优先使用搜索过滤噪音）
 - Bug：列表、查询、**截图下载 (images)**、创建、指派、评论、解决、关闭、激活、查我的 Bug、解决率统计
  - 任务：列表、查询、创建、编辑/更新、开始、完成、暂停、关闭（支持预计开始/截止日期、关联需求、指派给我、迭代页面链接）
 - 需求：列表、查询、创建
@@ -89,6 +90,30 @@ zentao whoami
 - 机器可读输出：全部命令支持 `--json`
 
 ## 日常使用
+
+### 全局全文检索（过滤噪音、定位对象）
+
+> **核心原则：没有明确指派时优先使用搜索过滤噪音。**
+> 当未收到明确指派的具体 ID（如任务 ID、Bug ID、测试单 ID、用例 ID），只有需求标题、模糊描述或模块名时，**严禁盲目遍历全量列表**，优先使用全局检索定位对象：
+
+```bash
+# 全局检索（默认匹配全部类型，按相关度评分排序）
+zentao search "事务-后端-值班管理优化-执行测试用例"
+
+# 限定对象类型（task / bug / case / story / testtask / doc / project / execution 等）
+zentao search "值班管理优化" --type task
+zentao search "生态市场" --type testtask
+zentao search "下载标准包" --type case
+
+# 控制返回上限（默认 20 条，自动翻页补齐）或指定页码
+zentao search "elk" --limit 10
+zentao search "运维监控" --page 2
+
+# 输出完整 JSON 结构（方便脚本或 AI 下一步提取 ID）
+zentao search "值班管理优化" --type task --json
+```
+
+匹配结果会显示 `type`、`id`（业务真实 ID）、清洗高亮后的纯文本 `title`、相关度评分 `score`、添加日期和页面 URL。
 
 ### 查看产品列表
 

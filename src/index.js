@@ -29,12 +29,14 @@ import { runDepartments } from "./commands/departments.js";
 import { runDocs } from "./commands/docs.js";
 import { runIssues } from "./commands/issues.js";
 import { runRisks } from "./commands/risks.js";
+import { runSearch } from "./commands/search.js";
 
 const COMMANDS = {
   "self-test": runSelfTest,
   "self-update": runSelfUpdate,
   upgrade: runSelfUpdate,
   release: runRelease,
+  search: runSearch,
   login: runLogin,
   whoami: runWhoami,
   products: runProducts,

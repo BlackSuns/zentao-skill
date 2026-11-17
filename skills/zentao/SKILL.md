@@ -15,12 +15,14 @@ metadata: {"openclaw":{"emoji":"🐞","install":[{"id":"node","kind":"node","pac
 - **严禁自行造轮子**：严禁尝试编写 Python 爬虫、curl 脚本或自建 HTTP 请求去直连禅道，本地 CLI 已处理好复杂的会话保持、Token 与企业老版本接口兼容。
 - **优先结构化输出**：当需要提取数据、进行分析或后续多步自动化时，优先在命令后追加 `--json` 参数。
 - **遇到样式/UI Bug 必须读图**：前端样式或界面缺陷 Bug 通常只包含截图，**排查前必须运行 `zentao bug images --id <id>` 或 `zentao bug get --id <id> --download-images` 下载截图，再使用多模态 `read` 工具查看本地图片**，切勿盲猜代码。
+- **没有明确指派时优先使用搜索过滤噪音**：当未收到明确指派的具体 ID（如任务 ID、Bug ID、测试单 ID、用例 ID），仅有关键词、模块名或模糊需求标题时，**严禁盲目遍历全量列表（如 tasks list、bugs list 等大范围翻页遍历）**，必须**优先使用 `zentao search <words> [--type ...]` 进行全局全文检索**，通过相关度评分和类型过滤快速精准定位目标对象后再跟进，最大程度过滤噪音与无用数据。
 
 ## When to use this skill
 
 Use this skill when the user asks anything about 禅道 / ZenTao, including:
 
 - bugs: list, mine, stats, get, images, create, resolve, assign, comment, close, activate
+- search: global full-text search across tasks, bugs, stories, test tasks, cases, docs, etc. to filter noise without explicit assignment
 - bug images: download and inspect screenshots/attachments for UI bugs
  - tasks: list, get, create, edit, start, finish, pause, close (with estStarted, deadline, story, assignedTo me, and execution URL support)
 - stories: list, get, create
@@ -37,6 +39,8 @@ Use this skill when the user asks anything about 禅道 / ZenTao, including:
 Typical user asks include:
 
 - “帮我查禅道 bug / task / story / todo”
+- “搜索‘事务-后端-值班管理优化-执行测试用例’”
+- “搜一下禅道里关于‘值班管理’的任务”
 - “看下这个 bug 的截图 / 下载 bug 图片”
 - “统计一下 bug 解决率” / “看看各产品的 bug 解决情况”
 - “看一下产品、项目、执行、版本、计划、构建”
@@ -99,6 +103,7 @@ Use the singular command for one record or a state-changing action, and the plur
 zentao login
 zentao whoami
 zentao self-test
+zentao search "事务-后端-值班管理优化-执行测试用例" [--type task]
 zentao products list
 zentao programs list
 zentao projects list
@@ -133,6 +138,27 @@ zentao risks list|get ...
 - Environment variables also work: `ZENTAO_URL`, `ZENTAO_ACCOUNT`, `ZENTAO_PASSWORD`
 - Add `--json` when the caller wants raw machine-readable output.
 - ZenTao URLs usually need the `/zentao` suffix.
+
+## Search commands (全局全文检索)
+
+```bash
+# 全局全文检索（默认匹配全部类型，按相关度评分排序）
+zentao search "事务-后端-值班管理优化-执行测试用例"
+
+# 限定对象类型过滤（task, bug, case, story, testtask, doc, project, execution, build, release, product, plan）
+zentao search "值班管理优化" --type task
+zentao search "生态市场" --type testtask
+zentao search "下载标准包" --type case
+
+# 指定返回数量上限（默认 20 条，自动翻页补齐）或指定页码
+zentao search "elk" --limit 10
+zentao search "运维监控" --page 2
+
+# 结构化 JSON 输出
+zentao search "值班管理优化" --type task --json
+```
+
+- **核心前提**：没有明确指派时优先使用搜索过滤噪音。当用户只提供了关键词、模块名或需求标题时，先搜索获取目标 `objectID` 和 `objectType`，再调用具体命令操作。
 
 ## Bug commands
 
